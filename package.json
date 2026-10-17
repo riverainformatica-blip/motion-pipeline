@@ -1,0 +1,32 @@
+{
+  "name": "motion-pipeline",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@google/genai": "^2.2.0",
+    "@remotion/cli": "4.0.448",
+    "@remotion/google-fonts": "4.0.448",
+    "@remotion/layout-utils": "4.0.448",
+    "@remotion/noise": "4.0.448",
+    "@remotion/transitions": "4.0.448",
+    "dotenv": "^17.4.2",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.448"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "ffmpeg-static": "^5.2.0",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "start": "remotion studio",
+    "image": "node scripts/gen-image.mjs",
+    "music": "node scripts/gen-music.mjs",
+    "sfx": "node scripts/gen-sfx.mjs",
+    "voice": "node scripts/gen-voice.mjs",
+    "tighten": "node scripts/tighten-voice.mjs"
+  }
+}
