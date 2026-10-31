@@ -344,18 +344,37 @@ export const HeroScene: React.FC = () => {
 };
 
 // ─── 9. CTA ───
-// Marketplace version (Mercado Libre): no contact data, links or "contact us" CTAs allowed.
-// Leave CONTACT empty here; set it only for versions published on own channels.
-export const CONTACT = "";
-const CTA_LABEL = "CÓMPRALO HOY";
+// Marketplace versions (Mercado Libre) must not show contact data, links or "contact us" CTAs:
+// pass whatsapp="" there. Own-channel versions show the number under the button.
+export type CtaProps = { label: string; whatsapp: string };
 
-export const CtaScene: React.FC = () => {
+const ChatIcon: React.FC = () => (
+  <svg width="58" height="58" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+    <path
+      d="M12 2.5a9.5 9.5 0 0 0-8.2 14.3L2.6 21.4l4.7-1.2A9.5 9.5 0 1 0 12 2.5Z"
+      fill="none"
+      stroke={palette.white}
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M9.2 7.6c-.3-.6-.6-.6-.9-.6h-.7c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.3 2.6 4.1 6.3 5.6 3.1 1.2 3.7 1 4.4.9.7-.1 2.2-.9 2.5-1.8.3-.9.3-1.6.2-1.8-.1-.2-.3-.3-.7-.5l-2.3-1.1c-.3-.1-.6-.2-.8.2l-1.1 1.3c-.2.2-.4.3-.8.1-.4-.2-1.5-.6-2.8-1.8-1-.9-1.7-2-1.9-2.4-.2-.4 0-.6.2-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.5 0-.6L9.2 7.6Z"
+      fill={palette.white}
+      transform="translate(12 12) scale(0.62) translate(-12 -12.6)"
+    />
+  </svg>
+);
+
+/** "7861910023" -> "786 191 0023" */
+const formatPhone = (n: string) => n.replace(/\D/g, "").replace(/^(\d{3})(\d{3})(\d{4})$/, "$1 $2 $3");
+
+export const CtaScene: React.FC<CtaProps> = ({ label, whatsapp }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const h = useEnter(4);
   const btn = spring({ frame: frame - 20, fps, config: springs.pop });
   const pulse = 1 + Math.sin(Math.max(0, frame - 44) / 7) * 0.025;
-  const contact = useEnter(32);
+  const contact = useEnter(34);
 
   return (
     <Slide background={tealBg} scrimStrength={0} watermark="→" watermarkCorner="bl" watermarkOpacity={0.08} logo={badgeDark}>
@@ -380,10 +399,18 @@ export const CtaScene: React.FC = () => {
           boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
         }}
       >
-        {CTA_LABEL}
+        {label}
       </div>
-      {CONTACT ? (
-        <div style={{ ...contact, fontFamily: fonts.inter, fontWeight: 800, fontSize: 44, color: palette.white, marginTop: 50, textShadow: halo }}>{CONTACT}</div>
+      {whatsapp ? (
+        <div style={{ ...contact, display: "flex", flexDirection: "column", alignItems: "center", marginTop: 60 }}>
+          <div style={{ ...kicker(palette.tint), fontSize: 32 }}>WHATSAPP</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 22, marginTop: 16 }}>
+            <ChatIcon />
+            <span style={{ fontFamily: fonts.inter, fontWeight: 900, fontSize: 76, letterSpacing: "-0.01em", color: palette.white, textShadow: halo }}>
+              {formatPhone(whatsapp)}
+            </span>
+          </div>
+        </div>
       ) : null}
     </Slide>
   );

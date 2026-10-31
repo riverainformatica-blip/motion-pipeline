@@ -6,7 +6,7 @@ import { slide } from "@remotion/transitions/slide";
 import { wipe } from "@remotion/transitions/wipe";
 import { optionalAsset } from "../assets";
 import { palette, fonts } from "../theme";
-import { CtaScene, EndScene, FeatureScene, FeatureProps, HeroScene, HookScene, ModulesScene, PainScene, RevealScene } from "./scenes";
+import { CtaProps, CtaScene, EndScene, FeatureScene, FeatureProps, HeroScene, HookScene, ModulesScene, PainScene, RevealScene } from "./scenes";
 
 const em = (t: string) => (
   <span style={{ fontFamily: fonts.playfair, fontStyle: "italic", fontWeight: 700, letterSpacing: "-0.01em", color: palette.primary }}>{t}</span>
@@ -73,7 +73,7 @@ const STARTS = SCENES.map((_, i) => SCENES.slice(0, i).reduce((a, b) => a + b, 0
 
 const t = linearTiming({ durationInFrames: T });
 
-export const SofthouseComposition: React.FC = () => {
+export const SofthouseComposition: React.FC<CtaProps> = ({ label, whatsapp }) => {
   const { durationInFrames } = useVideoConfig();
   const music = optionalAsset("audio/music.mp3");
   const impact = optionalAsset("sfx/impact.mp3");
@@ -112,7 +112,7 @@ export const SofthouseComposition: React.FC = () => {
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={slide({ direction: "from-bottom" })} timing={t} />
         <TransitionSeries.Sequence durationInFrames={D.cta}>
-          <CtaScene />
+          <CtaScene label={label} whatsapp={whatsapp} />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={fade()} timing={t} />
         <TransitionSeries.Sequence durationInFrames={D.end}>
