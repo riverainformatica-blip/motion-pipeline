@@ -73,6 +73,9 @@ const STARTS = SCENES.map((_, i) => SCENES.slice(0, i).reduce((a, b) => a + b, 0
 
 const t = linearTiming({ durationInFrames: T });
 
+// No voice-over in this piece, so music leads the mix (with VO the pipeline uses 0.18-0.24).
+const MUSIC_VOL = 0.8;
+
 export const SofthouseComposition: React.FC<CtaProps> = ({ label, whatsapp }) => {
   const { durationInFrames } = useVideoConfig();
   const music = optionalAsset("audio/music.mp3");
@@ -124,33 +127,33 @@ export const SofthouseComposition: React.FC<CtaProps> = ({ label, whatsapp }) =>
       {music ? (
         <Audio
           src={music}
-          volume={(f) => interpolate(f, [durationInFrames - 60, durationInFrames], [0.22, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
+          volume={(f) => interpolate(f, [durationInFrames - 60, durationInFrames], [MUSIC_VOL, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
         />
       ) : null}
 
-      {/* SFX: transients kept low (0.10-0.18). */}
+      {/* SFX: peaks ~10 dB over the music bed, accents only. */}
       {impact ? (
         <Sequence from={0} durationInFrames={60}>
-          <Audio src={impact} volume={0.18} />
+          <Audio src={impact} volume={0.3} />
         </Sequence>
       ) : null}
       {impact ? (
         <Sequence from={STARTS[2]} durationInFrames={60}>
-          <Audio src={impact} volume={0.14} />
+          <Audio src={impact} volume={0.22} />
         </Sequence>
       ) : null}
       {whoosh
         ? STARTS.slice(1).map((s, i) =>
             i === 1 ? null : (
               <Sequence key={s} from={s - 4} durationInFrames={30}>
-                <Audio src={whoosh} volume={0.11} />
+                <Audio src={whoosh} volume={0.25} />
               </Sequence>
             ),
           )
         : null}
       {pop ? (
         <Sequence from={STARTS[8] + 20} durationInFrames={30}>
-          <Audio src={pop} volume={0.14} />
+          <Audio src={pop} volume={0.3} />
         </Sequence>
       ) : null}
     </AbsoluteFill>
