@@ -344,7 +344,10 @@ export const HeroScene: React.FC = () => {
 };
 
 // ─── 9. CTA ───
-export const CONTACT = ""; // e.g. "softhouse.mx · WhatsApp 000 000 0000" — shown under the button when set
+// Marketplace version (Mercado Libre): no contact data, links or "contact us" CTAs allowed.
+// Leave CONTACT empty here; set it only for versions published on own channels.
+export const CONTACT = "";
+const CTA_LABEL = "CÓMPRALO HOY";
 
 export const CtaScene: React.FC = () => {
   const frame = useCurrentFrame();
@@ -377,7 +380,7 @@ export const CtaScene: React.FC = () => {
           boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
         }}
       >
-        SOLICITA TU DEMO
+        {CTA_LABEL}
       </div>
       {CONTACT ? (
         <div style={{ ...contact, fontFamily: fonts.inter, fontWeight: 800, fontSize: 44, color: palette.white, marginTop: 50, textShadow: halo }}>{CONTACT}</div>
