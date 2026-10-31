@@ -29,6 +29,10 @@ export type SlideProps = {
   watermarkCorner?: WatermarkCorner;
   watermarkOpacity?: number;
   showLogo?: boolean;
+  /** Custom persistent logo (overrides public/logos/logo-mark.png). */
+  logo?: React.ReactNode;
+  /** "dark" = dark background, light text (default). "light" = light background, dark text. */
+  tone?: "dark" | "light";
   /** Text shown if public/logos/logo-mark.png doesn't exist yet. */
   brandName?: string;
   children?: React.ReactNode;
@@ -80,6 +84,8 @@ export const Slide: React.FC<SlideProps> = ({
   watermarkCorner = "br",
   watermarkOpacity = 0.07,
   showLogo = true,
+  logo: customLogo,
+  tone = "dark",
   brandName = "BRAND",
   children,
 }) => {
@@ -100,6 +106,8 @@ export const Slide: React.FC<SlideProps> = ({
   const img = bgImage ? optionalAsset(bgImage) : null;
   const mark = optionalAsset(logo.mark);
   const unit = width / 1080;
+  // Contrast rule: overlays on light backgrounds go dark, on dark backgrounds go light.
+  const ink = tone === "light" ? palette.navy : palette.white;
 
   return (
     <AbsoluteFill style={{ backgroundColor: palette.navy, overflow: "hidden" }}>
@@ -123,7 +131,7 @@ export const Slide: React.FC<SlideProps> = ({
             fontSize: 520 * unit,
             lineHeight: 0.85,
             letterSpacing: "-0.06em",
-            color: palette.white,
+            color: ink,
             opacity: watermarkOpacity,
             whiteSpace: "nowrap",
             pointerEvents: "none",
@@ -148,7 +156,9 @@ export const Slide: React.FC<SlideProps> = ({
 
       {showLogo ? (
         <div style={{ position: "absolute", top: 70 * unit, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
-          {mark ? (
+          {customLogo ? (
+            customLogo
+          ) : mark ? (
             <Img src={mark} style={{ height: 64 * unit, width: "auto" }} />
           ) : (
             <div
@@ -157,8 +167,8 @@ export const Slide: React.FC<SlideProps> = ({
                 fontWeight: 800,
                 fontSize: 30 * unit,
                 letterSpacing: "0.3em",
-                color: palette.white,
-                textShadow: "0 2px 12px rgba(0,0,0,0.55)",
+                color: ink,
+                textShadow: tone === "light" ? "none" : "0 2px 12px rgba(0,0,0,0.55)",
               }}
             >
               {brandName}

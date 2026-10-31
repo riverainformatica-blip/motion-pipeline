@@ -3,9 +3,9 @@
 import { unlinkSync, writeFileSync } from "node:fs";
 import { elevenlabs, ensureDir, probeDuration, pub, runFfmpeg } from "./_lib.mjs";
 
-const VIDEO_SECONDS = 10; // duracion final ANTES del speedup 1.1x
+const VIDEO_SECONDS = 40; // duracion final ANTES del speedup 1.1x (SofthousePOS = 1200f)
 const PROMPT =
-  "Modern editorial data-report underscore, punchy tight drums, deep sub bass hits, confident minimal synth motif, " +
+  "Modern upbeat corporate tech underscore for a retail point-of-sale software promo, crisp claps, warm plucked synths, confident bass, " +
   "driving 120 bpm, starts at full energy immediately, no intro build, no vocals, instrumental";
 
 const RAW = pub("audio/music-raw.mp3");

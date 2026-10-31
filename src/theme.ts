@@ -1,16 +1,18 @@
 import { Easing } from "remotion";
 
-// PLACEHOLDER PALETTE — REPLACE WITH CLIENT'S [PALETA_DE_MARCA] WHEN PROVIDED.
+// Brand palette: Softhouse POS (sampled from the client's logo and UI screenshots).
 // Keep semantic keys; only swap hex values.
 export const palette = {
-  navy: "#0f2040",
-  primary: "#1e40af",
-  accent: "#3b82f6",
-  tint: "#dbeafe",
-  signature: "#c0f0c0",
+  navy: "#171e2c", // wordmark / UI sidebar — dark backgrounds, text on light
+  primary: "#0e766e", // brand teal — buttons, accents on light backgrounds
+  accent: "#14a090", // lighter teal for gradients
+  tint: "#d7f0ec", // light text tint on dark backgrounds
+  signature: "#7fe0cf", // mint — emphasis on dark backgrounds
   success: "#22c55e",
   white: "#ffffff",
   red: "#ef4444",
+  paper: "#f2f6f5", // UI page background — light slides
+  muted: "#5b6472", // secondary text on light backgrounds
 } as const;
 
 export const fonts = {
