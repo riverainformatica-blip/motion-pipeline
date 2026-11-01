@@ -74,34 +74,10 @@ const fr = (sec: number) => Math.ceil(sec * FPS);
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
 type VoKey = keyof typeof VO;
-const BODY: [VoKey, number][] = [
-  ["hook", 75],
-  ["pain", 105],
-  ["reveal", 105],
-  ["sell", 180],
-  ["pay", 180],
-  ["stock", 180],
-  ["modules", 150],
-  ["hero", 120],
-];
-const END = 60;
-
 export type Variant = "ml" | "wa";
-export type SofthouseProps = CtaProps & { variant: Variant };
-
-const timeline = (variant: Variant) => {
-  const ctaKey: VoKey = variant === "ml" ? "ctaMl" : "ctaWa";
-  const keys = [...BODY.map(([k]) => k), ctaKey];
-  const scenes = [
-    ...BODY.map(([k, base]) => Math.max(base, LEAD + fr(VO[k]) + TAIL)),
-    Math.max(135, LEAD + fr(VO[ctaKey]) + 40),
-    END,
-  ];
-  const starts = scenes.map((_, i) => sum(scenes.slice(0, i)) - i * T);
-  return { keys, scenes, starts, duration: sum(scenes) - (scenes.length - 1) * T };
-};
-
-export const softhouseDuration = (variant: Variant) => timeline(variant).duration;
+/** full = complete explainer (~46s); short = ad / stories cut (~15s). */
+export type Cut = "full" | "short";
+export type SofthouseProps = CtaProps & { variant: Variant; cut: Cut };
 
 /** Frame (inside the scene) where each spoken sentence starts; falls back to the scene's defaults. */
 const beats = (key: VoKey, expected: number) => {
@@ -109,67 +85,100 @@ const beats = (key: VoKey, expected: number) => {
   return b.length === expected ? b : undefined;
 };
 
+type SceneDef = {
+  id: string;
+  vo?: VoKey;
+  base: number; // minimum length in frames
+  air?: number; // frames after the line (default TAIL)
+  enter?: "slideUp" | "slideLeft" | "wipeLeft" | "wipeRight" | "fade"; // transition into this scene
+  node: React.ReactNode;
+};
+
+const scenesFor = ({ variant, cut, label, whatsapp }: SofthouseProps): SceneDef[] => {
+  const ctaVo: VoKey = variant === "ml" ? "ctaMl" : "ctaWa";
+  const hook: SceneDef = { id: "hook", vo: "hook", base: 75, node: <HookScene /> };
+  const reveal: SceneDef = { id: "reveal", vo: "reveal", base: 105, enter: "wipeLeft", node: <RevealScene /> };
+  const hero: SceneDef = { id: "hero", vo: "hero", base: cut === "short" ? 90 : 120, enter: "wipeRight", node: <HeroScene beats={beats("hero", 3)} /> };
+  const cta: SceneDef = { id: "cta", vo: ctaVo, base: 135, air: 40, enter: "slideUp", node: <CtaScene label={label} whatsapp={whatsapp} /> };
+  const end: SceneDef = { id: "end", base: 60, enter: "fade", node: <EndScene /> };
+
+  if (cut === "short") return [hook, reveal, hero, cta, end];
+
+  const featureVo: VoKey[] = ["sell", "pay", "stock"];
+  return [
+    hook,
+    { id: "pain", vo: "pain", base: 105, enter: "slideUp", node: <PainScene beats={beats("pain", 4)} /> },
+    reveal,
+    ...FEATURES.map(
+      (f, i): SceneDef => ({ id: `feature-${f.index}`, vo: featureVo[i], base: 180, enter: i === 0 ? "fade" : "slideLeft", node: <FeatureScene {...f} /> }),
+    ),
+    { id: "modules", vo: "modules", base: 150, enter: "slideUp", node: <ModulesScene /> },
+    hero,
+    cta,
+    end,
+  ];
+};
+
+const lengthOf = (d: SceneDef) => (d.vo ? Math.max(d.base, LEAD + fr(VO[d.vo]) + (d.air ?? TAIL)) : d.base);
+
+const timeline = (props: SofthouseProps) => {
+  const defs = scenesFor(props);
+  const lengths = defs.map(lengthOf);
+  const starts = lengths.map((_, i) => sum(lengths.slice(0, i)) - i * T);
+  return { defs, lengths, starts, duration: sum(lengths) - (lengths.length - 1) * T };
+};
+
+export const softhouseDuration = (props: SofthouseProps) => timeline(props).duration;
+
 const t = linearTiming({ durationInFrames: T });
+// Each presentation has its own props type, so build the whole Transition element per case.
+const transitionInto = (enter: NonNullable<SceneDef["enter"]>) => {
+  switch (enter) {
+    case "slideUp":
+      return <TransitionSeries.Transition presentation={slide({ direction: "from-bottom" })} timing={t} />;
+    case "slideLeft":
+      return <TransitionSeries.Transition presentation={slide({ direction: "from-right" })} timing={t} />;
+    case "wipeLeft":
+      return <TransitionSeries.Transition presentation={wipe({ direction: "from-left" })} timing={t} />;
+    case "wipeRight":
+      return <TransitionSeries.Transition presentation={wipe({ direction: "from-right" })} timing={t} />;
+    case "fade":
+      return <TransitionSeries.Transition presentation={fade()} timing={t} />;
+  }
+};
 
 // Mix with voice-over: music 10-14 dB under the voice, SFX transients 12+ dB under the voice peak.
 const MUSIC_VOL = 0.24;
 
-export const SofthouseComposition: React.FC<SofthouseProps> = ({ label, whatsapp, variant }) => {
+export const SofthouseComposition: React.FC<SofthouseProps> = (props) => {
   const { durationInFrames } = useVideoConfig();
-  const { keys, scenes, starts } = timeline(variant);
-  const [hook, pain, reveal, sell, pay, stock, modules, hero, cta, end] = scenes;
+  const { defs, lengths, starts } = timeline(props);
   const music = optionalAsset("audio/music.mp3");
   const impact = optionalAsset("sfx/impact.mp3");
   const whoosh = optionalAsset("sfx/whoosh.mp3");
   const pop = optionalAsset("sfx/pop.mp3");
-  const featureDur = [sell, pay, stock];
+  const revealAt = starts[defs.findIndex((d) => d.id === "reveal")];
+  const ctaAt = starts[defs.findIndex((d) => d.id === "cta")];
 
   return (
     <AbsoluteFill style={{ backgroundColor: palette.navy }}>
       <TransitionSeries>
-        <TransitionSeries.Sequence durationInFrames={hook}>
-          <HookScene />
-        </TransitionSeries.Sequence>
-        <TransitionSeries.Transition presentation={slide({ direction: "from-bottom" })} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={pain}>
-          <PainScene beats={beats("pain", 4)} />
-        </TransitionSeries.Sequence>
-        <TransitionSeries.Transition presentation={wipe({ direction: "from-left" })} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={reveal}>
-          <RevealScene />
-        </TransitionSeries.Sequence>
-        {FEATURES.map((f, i) => (
-          <React.Fragment key={f.index}>
-            <TransitionSeries.Transition presentation={i === 0 ? fade() : slide({ direction: "from-right" })} timing={t} />
-            <TransitionSeries.Sequence durationInFrames={featureDur[i]}>
-              <FeatureScene {...f} />
-            </TransitionSeries.Sequence>
+        {defs.map((d, i) => (
+          <React.Fragment key={d.id}>
+            {i > 0 ? transitionInto(d.enter ?? "fade") : null}
+            <TransitionSeries.Sequence durationInFrames={lengths[i]}>{d.node}</TransitionSeries.Sequence>
           </React.Fragment>
         ))}
-        <TransitionSeries.Transition presentation={slide({ direction: "from-bottom" })} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={modules}>
-          <ModulesScene />
-        </TransitionSeries.Sequence>
-        <TransitionSeries.Transition presentation={wipe({ direction: "from-right" })} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={hero}>
-          <HeroScene beats={beats("hero", 3)} />
-        </TransitionSeries.Sequence>
-        <TransitionSeries.Transition presentation={slide({ direction: "from-bottom" })} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={cta}>
-          <CtaScene label={label} whatsapp={whatsapp} />
-        </TransitionSeries.Sequence>
-        <TransitionSeries.Transition presentation={fade()} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={end}>
-          <EndScene />
-        </TransitionSeries.Sequence>
       </TransitionSeries>
 
       {/* Voice-over: one clip per scene. */}
-      {keys.map((k, i) => (
-        <Sequence key={k} from={starts[i] + LEAD} durationInFrames={fr(VO[k]) + 2}>
-          <Audio src={staticFile(`audio/softhouse/vo-${k}.mp3`)} volume={1} />
-        </Sequence>
-      ))}
+      {defs.map((d, i) =>
+        d.vo ? (
+          <Sequence key={d.id} from={starts[i] + LEAD} durationInFrames={fr(VO[d.vo]) + 2}>
+            <Audio src={staticFile(`audio/softhouse/vo-${d.vo}.mp3`)} volume={1} />
+          </Sequence>
+        ) : null,
+      )}
 
       {/* Music: frame 0 -> end, NO fade-in, fade-out only in last 60f. */}
       {music ? (
@@ -181,18 +190,18 @@ export const SofthouseComposition: React.FC<SofthouseProps> = ({ label, whatsapp
 
       {/* SFX: transients kept 12+ dB under the voice peak (0.10-0.18). */}
       {impact ? (
-        <Sequence from={0} durationInFrames={60}>
-          <Audio src={impact} volume={0.18} />
-        </Sequence>
-      ) : null}
-      {impact ? (
-        <Sequence from={starts[2]} durationInFrames={60}>
-          <Audio src={impact} volume={0.14} />
-        </Sequence>
+        <>
+          <Sequence from={0} durationInFrames={60}>
+            <Audio src={impact} volume={0.18} />
+          </Sequence>
+          <Sequence from={revealAt} durationInFrames={60}>
+            <Audio src={impact} volume={0.14} />
+          </Sequence>
+        </>
       ) : null}
       {whoosh
-        ? starts.slice(1).map((s, i) =>
-            i === 1 ? null : (
+        ? starts.slice(1).map((s) =>
+            s === revealAt ? null : (
               <Sequence key={s} from={s - 4} durationInFrames={30}>
                 <Audio src={whoosh} volume={0.11} />
               </Sequence>
@@ -200,7 +209,7 @@ export const SofthouseComposition: React.FC<SofthouseProps> = ({ label, whatsapp
           )
         : null}
       {pop ? (
-        <Sequence from={starts[8] + 20} durationInFrames={30}>
+        <Sequence from={ctaAt + 20} durationInFrames={30}>
           <Audio src={pop} volume={0.14} />
         </Sequence>
       ) : null}

@@ -90,7 +90,7 @@ export const Slide: React.FC<SlideProps> = ({
   children,
 }) => {
   const frame = useCurrentFrame();
-  const { durationInFrames, width } = useVideoConfig();
+  const { durationInFrames, width, height } = useVideoConfig();
 
   // Snap-in 1.06 -> 1 in 8f, then continuous push-in 1.0 -> 1.045 over the slide.
   const snap = interpolate(frame, [0, 8], [1.06, 1], {
@@ -106,6 +106,8 @@ export const Slide: React.FC<SlideProps> = ({
   const img = bgImage ? optionalAsset(bgImage) : null;
   const mark = optionalAsset(logo.mark);
   const unit = width / 1080;
+  // Square / landscape canvases: tighter top margin for the logo and a smaller watermark.
+  const compact = height < 1400;
   // Contrast rule: overlays on light backgrounds go dark, on dark backgrounds go light.
   const ink = tone === "light" ? palette.navy : palette.white;
 
@@ -128,7 +130,7 @@ export const Slide: React.FC<SlideProps> = ({
             ...cornerPos[watermarkCorner],
             fontFamily: fonts.inter,
             fontWeight: 900,
-            fontSize: 520 * unit,
+            fontSize: (compact ? 380 : 520) * unit,
             lineHeight: 0.85,
             letterSpacing: "-0.06em",
             color: ink,
@@ -155,7 +157,7 @@ export const Slide: React.FC<SlideProps> = ({
       </AbsoluteFill>
 
       {showLogo ? (
-        <div style={{ position: "absolute", top: 70 * unit, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
+        <div style={{ position: "absolute", top: (compact ? 34 : 70) * unit, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
           {customLogo ? (
             customLogo
           ) : mark ? (

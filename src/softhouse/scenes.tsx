@@ -18,6 +18,9 @@ const useEnter = (delay = 0): React.CSSProperties => {
   };
 };
 
+/** Square (1:1) canvases get a compact layout; vertical (9:16) is the reference design. */
+const useSquare = () => useVideoConfig().height < 1400;
+
 const Enter: React.FC<{ delay: number; style?: React.CSSProperties; children: React.ReactNode }> = ({ delay, style, children }) => {
   const e = useEnter(delay);
   return <div style={{ ...style, ...e }}>{children}</div>;
@@ -129,20 +132,21 @@ export const RevealScene: React.FC = () => {
   const markIn = spring({ frame: frame - 2, fps, config: springs.slam });
   const wordIn = spring({ frame: frame - 14, fps, config: springs.smooth });
   const tag = useEnter(34);
+  const sq = useSquare();
 
   return (
     <Slide background={lightBg} tone="light" scrimStrength={0} showLogo={false}>
       <div style={{ transform: `scale(${interpolate(markIn, [0, 1], [0, 1])}) rotate(${interpolate(markIn, [0, 1], [-14, 0])}deg)` }}>
-        <LogoMark size={300} style={{ filter: "drop-shadow(0 24px 40px rgba(14,118,110,0.35))" }} />
+        <LogoMark size={sq ? 230 : 300} style={{ filter: "drop-shadow(0 24px 40px rgba(14,118,110,0.35))" }} />
       </div>
       <div
         style={{
-          marginTop: 64,
+          marginTop: sq ? 44 : 64,
           opacity: interpolate(wordIn, [0, 1], [0, 1]),
           transform: `translateY(${interpolate(wordIn, [0, 1], [40, 0])}px)`,
         }}
       >
-        <Wordmark size={128} tone="onLight" tagline={false} />
+        <Wordmark size={sq ? 112 : 128} tone="onLight" tagline={false} />
       </div>
       <div style={{ ...tag, ...kicker(palette.muted), fontSize: 36, marginTop: 34 }}>PUNTO DE VENTA MULTIGIRO</div>
     </Slide>
@@ -158,7 +162,14 @@ const IMG_W = 1080;
 const IMG_H = 676;
 
 /** Screenshot inside a rounded card; pans/zooms from one focus point to another. */
-const ScreenPan: React.FC<{ src: string; from: Focus; to: Focus; delay?: number }> = ({ src, from, to, delay = 0 }) => {
+const ScreenPan: React.FC<{ src: string; from: Focus; to: Focus; delay?: number; frameW?: number; frameH?: number }> = ({
+  src,
+  from,
+  to,
+  delay = 0,
+  frameW: FW = FRAME_W,
+  frameH: FH = FRAME_H,
+}) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const enter = spring({ frame: frame - delay, fps, config: springs.smooth });
@@ -167,17 +178,17 @@ const ScreenPan: React.FC<{ src: string; from: Focus; to: Focus; delay?: number 
   const fy = interpolate(t, [0, 1], [from.fy, to.fy]);
   const s = interpolate(t, [0, 1], [from.s, to.s]);
 
-  const base = Math.max(FRAME_W / IMG_W, FRAME_H / IMG_H);
+  const base = Math.max(FW / IMG_W, FH / IMG_H);
   const w = IMG_W * base * s;
   const h = IMG_H * base * s;
-  const left = Math.min(0, Math.max(FRAME_W - w, FRAME_W / 2 - fx * w));
-  const top = Math.min(0, Math.max(FRAME_H - h, FRAME_H / 2 - fy * h));
+  const left = Math.min(0, Math.max(FW - w, FW / 2 - fx * w));
+  const top = Math.min(0, Math.max(FH - h, FH / 2 - fy * h));
 
   return (
     <div
       style={{
-        width: FRAME_W,
-        height: FRAME_H,
+        width: FW,
+        height: FH,
         borderRadius: 30,
         overflow: "hidden",
         position: "relative",
@@ -192,30 +203,30 @@ const ScreenPan: React.FC<{ src: string; from: Focus; to: Focus; delay?: number 
   );
 };
 
-const Check: React.FC = () => (
-  <svg width="56" height="56" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+const Check: React.FC<{ size?: number }> = ({ size = 56 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
     <circle cx="12" cy="12" r="11" fill={palette.primary} />
     <path d="M7 12.5 L10.4 15.8 L17 9" stroke={palette.white} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
-const Chip: React.FC<{ delay: number; children: React.ReactNode }> = ({ delay, children }) => (
+const Chip: React.FC<{ delay: number; compact?: boolean; children: React.ReactNode }> = ({ delay, compact = false, children }) => (
   <Enter
     delay={delay}
     style={{
       display: "flex",
       alignItems: "center",
-      gap: 26,
-      width: 900,
-      padding: "22px 34px",
+      gap: compact ? 18 : 26,
+      width: compact ? 860 : 900,
+      padding: compact ? "12px 24px" : "22px 34px",
       backgroundColor: palette.white,
       borderRadius: 24,
       boxShadow: "0 10px 30px rgba(23,30,44,0.08), 0 0 0 1px rgba(23,30,44,0.07)",
       textAlign: "left",
     }}
   >
-    <Check />
-    <span style={{ fontFamily: fonts.inter, fontWeight: 800, fontSize: 42, letterSpacing: "-0.015em", color: palette.navy, lineHeight: 1.1 }}>
+    <Check size={compact ? 40 : 56} />
+    <span style={{ fontFamily: fonts.inter, fontWeight: 800, fontSize: compact ? 32 : 42, letterSpacing: "-0.015em", color: palette.navy, lineHeight: 1.1 }}>
       {children}
     </span>
   </Enter>
@@ -236,18 +247,21 @@ export const FeatureScene: React.FC<FeatureProps> = ({ index, kickerText, title,
   const k = useEnter(2);
   const h = useEnter(6);
   const sub = useEnter(12);
+  const sq = useSquare();
   return (
     <Slide background={lightBg} tone="light" scrimStrength={0} watermark={index} watermarkCorner="bl" watermarkOpacity={0.05} logo={badgeLight}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, marginTop: 40 }}>
-        <div style={{ ...k, ...kicker(palette.primary) }}>{kickerText}</div>
-        <h1 style={{ ...h, ...headlineLight, marginTop: 22 }}>{title}</h1>
-        <div style={{ ...sub, fontFamily: fonts.inter, fontWeight: 600, fontSize: 40, color: palette.primary, marginTop: 22 }}>{subtitle}</div>
-        <div style={{ marginTop: 54 }}>
-          <ScreenPan src={img} from={from} to={to} delay={10} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, marginTop: sq ? 34 : 40 }}>
+        <div style={{ ...k, ...kicker(palette.primary), fontSize: sq ? 22 : 30 }}>{kickerText}</div>
+        <h1 style={{ ...h, ...headlineLight, fontSize: sq ? 72 : 104, marginTop: sq ? 10 : 22 }}>{title}</h1>
+        <div style={{ ...sub, fontFamily: fonts.inter, fontWeight: 600, fontSize: sq ? 30 : 40, color: palette.primary, marginTop: sq ? 10 : 22 }}>
+          {subtitle}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 50 }}>
+        <div style={{ marginTop: sq ? 22 : 54 }}>
+          <ScreenPan src={img} from={from} to={to} delay={10} frameW={sq ? 860 : FRAME_W} frameH={sq ? 390 : FRAME_H} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: sq ? 10 : 18, marginTop: sq ? 20 : 50 }}>
           {chips.map((c, i) => (
-            <Chip key={c} delay={30 + i * 12}>
+            <Chip key={c} delay={30 + i * 12} compact={sq}>
               {c}
             </Chip>
           ))}
@@ -273,14 +287,15 @@ const MODULES = [
 
 export const ModulesScene: React.FC = () => {
   const h = useEnter(2);
+  const sq = useSquare();
   return (
     <Slide background={darkBg} scrimStrength={0} watermark="10" watermarkCorner="bl" logo={badgeDark}>
-      <h1 style={{ ...h, ...headlineDark, fontSize: 108 }}>
+      <h1 style={{ ...h, ...headlineDark, fontSize: sq ? 84 : 108 }}>
         Todo tu negocio
         <br />
         en un <span style={{ ...serifEm(palette.signature) }}>solo lugar</span>
       </h1>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 70, width: 920 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: sq ? 14 : 20, marginTop: sq ? 40 : 70, width: 920 }}>
         {MODULES.map((m, i) => (
           <Enter
             key={m}
@@ -289,7 +304,7 @@ export const ModulesScene: React.FC = () => {
               display: "flex",
               alignItems: "center",
               gap: 18,
-              padding: "26px 28px",
+              padding: sq ? "15px 24px" : "26px 28px",
               borderRadius: 22,
               backgroundColor: "rgba(255,255,255,0.07)",
               boxShadow: "inset 0 0 0 1.5px rgba(127,224,207,0.28)",
@@ -297,7 +312,7 @@ export const ModulesScene: React.FC = () => {
             }}
           >
             <div style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: palette.signature, flexShrink: 0 }} />
-            <span style={{ fontFamily: fonts.inter, fontWeight: 800, fontSize: 38, color: palette.white, letterSpacing: "-0.01em" }}>{m}</span>
+            <span style={{ fontFamily: fonts.inter, fontWeight: 800, fontSize: sq ? 32 : 38, color: palette.white, letterSpacing: "-0.01em" }}>{m}</span>
           </Enter>
         ))}
       </div>
@@ -315,9 +330,10 @@ export const HeroScene: React.FC<{ beats?: number[] }> = ({ beats = [4, 16, 28] 
     ["Imprime.", true],
   ];
   const img = useEnter(4);
+  const sq = useSquare();
   return (
     <Slide background={palette.white} tone="light" scrimStrength={0} logo={badgeLight}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: -40 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: sq ? 40 : -40 }}>
         {words.map(([w, em], i) => {
           const s = spring({ frame: frame - beats[i], fps, config: springs.slam });
           return (
@@ -325,18 +341,21 @@ export const HeroScene: React.FC<{ beats?: number[] }> = ({ beats = [4, 16, 28] 
               key={w}
               style={{
                 ...headlineLight,
-                fontSize: 128,
+                fontSize: sq ? 88 : 128,
                 lineHeight: 1.04,
                 opacity: interpolate(s, [0, 0.3], [0, 1], clamp),
                 transform: `scale(${interpolate(s, [0, 1], [1.8, 1])})`,
               }}
             >
-              {em ? <span style={{ ...serifEm(palette.primary), fontSize: 140 }}>{w}</span> : w}
+              {em ? <span style={{ ...serifEm(palette.primary), fontSize: sq ? 96 : 140 }}>{w}</span> : w}
             </div>
           );
         })}
-        <div style={{ ...img, width: 1080, height: 760, marginTop: 10, overflow: "hidden", position: "relative" }}>
-          <Img src={staticFile("images/softhouse/hero-laptop.jpg")} style={{ position: "absolute", width: 1080, height: 1080, left: 0, top: -240 }} />
+        <div style={{ ...img, width: sq ? 860 : 1080, height: sq ? 500 : 760, marginTop: 10, overflow: "hidden", position: "relative" }}>
+          <Img
+            src={staticFile("images/softhouse/hero-laptop.jpg")}
+            style={{ position: "absolute", width: sq ? 860 : 1080, height: sq ? 860 : 1080, left: 0, top: sq ? -215 : -240 }}
+          />
         </div>
       </div>
     </Slide>
