@@ -1,11 +1,12 @@
 import React from "react";
-import { AbsoluteFill, Audio, Sequence, interpolate, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, Sequence, interpolate, staticFile, useVideoConfig } from "remotion";
 import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { slide } from "@remotion/transitions/slide";
 import { wipe } from "@remotion/transitions/wipe";
 import { optionalAsset } from "../assets";
 import { palette, fonts } from "../theme";
+import { VO, VO_STARTS } from "./vo-durations";
 import { CtaProps, CtaScene, EndScene, FeatureScene, FeatureProps, HeroScene, HookScene, ModulesScene, PainScene, RevealScene } from "./scenes";
 
 const em = (t: string) => (
@@ -62,66 +63,113 @@ const FEATURES: FeatureProps[] = [
   },
 ];
 
-// Storyboard (30fps). Varied rhythm: fast hook, 6s feature beats, CTA with air, logo <= 2s.
+// Storyboard (30fps). Every scene is sized around its voice-over line (VO starts LEAD frames in and
+// must end TAIL frames before the cut, clear of the outgoing transition). Bases keep the visual rhythm:
+// fast hook, feature beats, CTA with air, logo <= 2s.
 const T = 10; // transition overlap
-const D = { hook: 75, pain: 105, reveal: 105, feature: 180, modules: 150, hero: 120, cta: 135, end: 60 } as const;
-const SCENES = [D.hook, D.pain, D.reveal, D.feature, D.feature, D.feature, D.modules, D.hero, D.cta, D.end];
-export const SOFTHOUSE_DURATION = SCENES.reduce((a, b) => a + b, 0) - (SCENES.length - 1) * T; // 1200f = 40s
+const LEAD = 4;
+const TAIL = T + 8;
+const FPS = 30;
+const fr = (sec: number) => Math.ceil(sec * FPS);
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
-// Scene start frames on the timeline (for SFX sync).
-const STARTS = SCENES.map((_, i) => SCENES.slice(0, i).reduce((a, b) => a + b, 0) - i * T);
+type VoKey = keyof typeof VO;
+const BODY: [VoKey, number][] = [
+  ["hook", 75],
+  ["pain", 105],
+  ["reveal", 105],
+  ["sell", 180],
+  ["pay", 180],
+  ["stock", 180],
+  ["modules", 150],
+  ["hero", 120],
+];
+const END = 60;
+
+export type Variant = "ml" | "wa";
+export type SofthouseProps = CtaProps & { variant: Variant };
+
+const timeline = (variant: Variant) => {
+  const ctaKey: VoKey = variant === "ml" ? "ctaMl" : "ctaWa";
+  const keys = [...BODY.map(([k]) => k), ctaKey];
+  const scenes = [
+    ...BODY.map(([k, base]) => Math.max(base, LEAD + fr(VO[k]) + TAIL)),
+    Math.max(135, LEAD + fr(VO[ctaKey]) + 40),
+    END,
+  ];
+  const starts = scenes.map((_, i) => sum(scenes.slice(0, i)) - i * T);
+  return { keys, scenes, starts, duration: sum(scenes) - (scenes.length - 1) * T };
+};
+
+export const softhouseDuration = (variant: Variant) => timeline(variant).duration;
+
+/** Frame (inside the scene) where each spoken sentence starts; falls back to the scene's defaults. */
+const beats = (key: VoKey, expected: number) => {
+  const b = VO_STARTS[key].map((sec) => LEAD + Math.round(sec * FPS));
+  return b.length === expected ? b : undefined;
+};
 
 const t = linearTiming({ durationInFrames: T });
 
-// No voice-over in this piece, so music leads the mix (with VO the pipeline uses 0.18-0.24).
-const MUSIC_VOL = 0.8;
+// Mix with voice-over: music 10-14 dB under the voice, SFX transients 12+ dB under the voice peak.
+const MUSIC_VOL = 0.24;
 
-export const SofthouseComposition: React.FC<CtaProps> = ({ label, whatsapp }) => {
+export const SofthouseComposition: React.FC<SofthouseProps> = ({ label, whatsapp, variant }) => {
   const { durationInFrames } = useVideoConfig();
+  const { keys, scenes, starts } = timeline(variant);
+  const [hook, pain, reveal, sell, pay, stock, modules, hero, cta, end] = scenes;
   const music = optionalAsset("audio/music.mp3");
   const impact = optionalAsset("sfx/impact.mp3");
   const whoosh = optionalAsset("sfx/whoosh.mp3");
   const pop = optionalAsset("sfx/pop.mp3");
+  const featureDur = [sell, pay, stock];
 
   return (
     <AbsoluteFill style={{ backgroundColor: palette.navy }}>
       <TransitionSeries>
-        <TransitionSeries.Sequence durationInFrames={D.hook}>
+        <TransitionSeries.Sequence durationInFrames={hook}>
           <HookScene />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={slide({ direction: "from-bottom" })} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={D.pain}>
-          <PainScene />
+        <TransitionSeries.Sequence durationInFrames={pain}>
+          <PainScene beats={beats("pain", 4)} />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={wipe({ direction: "from-left" })} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={D.reveal}>
+        <TransitionSeries.Sequence durationInFrames={reveal}>
           <RevealScene />
         </TransitionSeries.Sequence>
         {FEATURES.map((f, i) => (
           <React.Fragment key={f.index}>
             <TransitionSeries.Transition presentation={i === 0 ? fade() : slide({ direction: "from-right" })} timing={t} />
-            <TransitionSeries.Sequence durationInFrames={D.feature}>
+            <TransitionSeries.Sequence durationInFrames={featureDur[i]}>
               <FeatureScene {...f} />
             </TransitionSeries.Sequence>
           </React.Fragment>
         ))}
         <TransitionSeries.Transition presentation={slide({ direction: "from-bottom" })} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={D.modules}>
+        <TransitionSeries.Sequence durationInFrames={modules}>
           <ModulesScene />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={wipe({ direction: "from-right" })} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={D.hero}>
-          <HeroScene />
+        <TransitionSeries.Sequence durationInFrames={hero}>
+          <HeroScene beats={beats("hero", 3)} />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={slide({ direction: "from-bottom" })} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={D.cta}>
+        <TransitionSeries.Sequence durationInFrames={cta}>
           <CtaScene label={label} whatsapp={whatsapp} />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={fade()} timing={t} />
-        <TransitionSeries.Sequence durationInFrames={D.end}>
+        <TransitionSeries.Sequence durationInFrames={end}>
           <EndScene />
         </TransitionSeries.Sequence>
       </TransitionSeries>
+
+      {/* Voice-over: one clip per scene. */}
+      {keys.map((k, i) => (
+        <Sequence key={k} from={starts[i] + LEAD} durationInFrames={fr(VO[k]) + 2}>
+          <Audio src={staticFile(`audio/softhouse/vo-${k}.mp3`)} volume={1} />
+        </Sequence>
+      ))}
 
       {/* Music: frame 0 -> end, NO fade-in, fade-out only in last 60f. */}
       {music ? (
@@ -131,29 +179,29 @@ export const SofthouseComposition: React.FC<CtaProps> = ({ label, whatsapp }) =>
         />
       ) : null}
 
-      {/* SFX: peaks ~10 dB over the music bed, accents only. */}
+      {/* SFX: transients kept 12+ dB under the voice peak (0.10-0.18). */}
       {impact ? (
         <Sequence from={0} durationInFrames={60}>
-          <Audio src={impact} volume={0.3} />
+          <Audio src={impact} volume={0.18} />
         </Sequence>
       ) : null}
       {impact ? (
-        <Sequence from={STARTS[2]} durationInFrames={60}>
-          <Audio src={impact} volume={0.22} />
+        <Sequence from={starts[2]} durationInFrames={60}>
+          <Audio src={impact} volume={0.14} />
         </Sequence>
       ) : null}
       {whoosh
-        ? STARTS.slice(1).map((s, i) =>
+        ? starts.slice(1).map((s, i) =>
             i === 1 ? null : (
               <Sequence key={s} from={s - 4} durationInFrames={30}>
-                <Audio src={whoosh} volume={0.25} />
+                <Audio src={whoosh} volume={0.11} />
               </Sequence>
             ),
           )
         : null}
       {pop ? (
-        <Sequence from={STARTS[8] + 20} durationInFrames={30}>
-          <Audio src={pop} volume={0.3} />
+        <Sequence from={starts[8] + 20} durationInFrames={30}>
+          <Audio src={pop} volume={0.14} />
         </Sequence>
       ) : null}
     </AbsoluteFill>

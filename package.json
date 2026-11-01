@@ -26,6 +26,7 @@
     "image": "node scripts/gen-image.mjs",
     "music": "node scripts/gen-music.mjs",
     "music:loop": "node scripts/gen-music-loop.mjs",
+    "softhouse:voice": "node scripts/softhouse-voice.mjs",
     "sfx": "node scripts/gen-sfx.mjs",
     "voice": "node scripts/gen-voice.mjs",
     "tighten": "node scripts/tighten-voice.mjs"

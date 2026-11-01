@@ -2,7 +2,7 @@ import React from "react";
 import { Composition } from "remotion";
 import { ExampleComposition } from "./example/ExampleComposition";
 import { LogoLockup, LogoMark } from "./softhouse/brand";
-import { SOFTHOUSE_DURATION, SofthouseComposition } from "./softhouse/SofthouseComposition";
+import { SofthouseComposition, softhouseDuration } from "./softhouse/SofthouseComposition";
 
 export const RemotionRoot: React.FC = () => (
   <>
@@ -11,8 +11,8 @@ export const RemotionRoot: React.FC = () => (
     <Composition
       id="SofthousePOS-ML"
       component={SofthouseComposition}
-      defaultProps={{ label: "CÓMPRALO HOY", whatsapp: "" }}
-      durationInFrames={SOFTHOUSE_DURATION}
+      defaultProps={{ label: "CÓMPRALO HOY", whatsapp: "", variant: "ml" as const }}
+      durationInFrames={softhouseDuration("ml")}
       fps={30}
       width={1080}
       height={1920}
@@ -21,8 +21,8 @@ export const RemotionRoot: React.FC = () => (
     <Composition
       id="SofthousePOS-WA"
       component={SofthouseComposition}
-      defaultProps={{ label: "SOLICITA TU DEMO", whatsapp: "7861910023" }}
-      durationInFrames={SOFTHOUSE_DURATION}
+      defaultProps={{ label: "SOLICITA TU DEMO", whatsapp: "7861910023", variant: "wa" as const }}
+      durationInFrames={softhouseDuration("wa")}
       fps={30}
       width={1080}
       height={1920}

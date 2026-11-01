@@ -101,13 +101,13 @@ const XMark: React.FC = () => (
   </svg>
 );
 
-export const PainScene: React.FC = () => {
+export const PainScene: React.FC<{ beats?: number[] }> = ({ beats = [4, 13, 22, 46] }) => {
   const items = ["Errores en el cambio", "Inventario a ojo", "Productos que caducan"];
   return (
     <Slide background={darkBg} scrimStrength={0} watermark="3" watermarkCorner="bl" logo={badgeDark}>
       <div style={{ display: "flex", flexDirection: "column", gap: 34, alignItems: "flex-start" }}>
         {items.map((t, i) => (
-          <Enter key={t} delay={4 + i * 9} style={{ display: "flex", alignItems: "center", gap: 28 }}>
+          <Enter key={t} delay={beats[i]} style={{ display: "flex", alignItems: "center", gap: 28 }}>
             <XMark />
             <span style={{ fontFamily: fonts.inter, fontWeight: 800, fontSize: 64, letterSpacing: "-0.02em", color: palette.white, textShadow: halo }}>
               {t}
@@ -115,7 +115,7 @@ export const PainScene: React.FC = () => {
           </Enter>
         ))}
       </div>
-      <Enter delay={46} style={{ marginTop: 90 }}>
+      <Enter delay={beats[3]} style={{ marginTop: 90 }}>
         <span style={{ ...serifEm(palette.signature), fontSize: 92, textShadow: halo }}>Hay una forma mejor.</span>
       </Enter>
     </Slide>
@@ -306,7 +306,7 @@ export const ModulesScene: React.FC = () => {
 };
 
 // ─── 8. HERO — Escanea. Cobra. Imprime. ───
-export const HeroScene: React.FC = () => {
+export const HeroScene: React.FC<{ beats?: number[] }> = ({ beats = [4, 16, 28] }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const words: [string, boolean][] = [
@@ -319,7 +319,7 @@ export const HeroScene: React.FC = () => {
     <Slide background={palette.white} tone="light" scrimStrength={0} logo={badgeLight}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: -40 }}>
         {words.map(([w, em], i) => {
-          const s = spring({ frame: frame - (4 + i * 12), fps, config: springs.slam });
+          const s = spring({ frame: frame - beats[i], fps, config: springs.slam });
           return (
             <div
               key={w}

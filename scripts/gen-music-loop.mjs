@@ -4,7 +4,7 @@
 import { unlinkSync, writeFileSync } from "node:fs";
 import { elevenlabs, ensureDir, probeDuration, pub, runFfmpeg } from "./_lib.mjs";
 
-const VIDEO_SECONDS = 40; // duracion final ANTES del speedup 1.1x
+const VIDEO_SECONDS = 52; // duracion final ANTES del speedup 1.1x (SofthousePOS-WA = 51.1s)
 const PROMPT =
   "Upbeat modern corporate tech background music loop, 120 bpm, crisp claps and tight kick, warm plucked synth melody, " +
   "confident bass, bright and optimistic, instrumental, no vocals, seamless loop";
